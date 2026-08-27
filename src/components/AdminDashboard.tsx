@@ -45,6 +45,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   // Product Modal State
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [isSavingProduct, setIsSavingProduct] = useState(false);
+  const [productSaveError, setProductSaveError] = useState<string | null>(null);
 
   // Form State for Product
   const [formName, setFormName] = useState('');
@@ -79,6 +81,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   // Open Add Product
   const handleOpenAdd = () => {
     setEditingProduct(null);
+    setProductSaveError(null);
     setFormName('');
     setFormNameEn('');
     setFormCode(`EGY-${Math.floor(100 + Math.random() * 900)}`);
@@ -104,6 +107,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   // Open Edit Product
   const handleOpenEdit = (p: Product) => {
     setEditingProduct(p);
+    setProductSaveError(null);
     setFormName(p.name);
     setFormNameEn(p.nameEn || '');
     setFormCode(p.itemCode);
@@ -127,36 +131,46 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const handleSaveProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formName.trim()) {
-      alert('يرجى كتابة اسم المنتج');
+      setProductSaveError('يرجى إدخال اسم المنتج باللغة العربية');
       return;
     }
 
-    const payload = {
-      name: formName,
-      nameEn: formNameEn,
-      itemCode: formCode,
-      category: formCategory,
-      price: Number(formPrice),
-      originalPrice: formOriginalPrice ? Number(formOriginalPrice) : undefined,
-      shortDesc: formShortDesc,
-      description: formDesc,
-      images: [formImageUrl || 'https://images.unsplash.com/photo-1599732448498-34863c8096b8?auto=format&fit=crop&w=800&q=80'],
-      material: formMaterial,
-      dimensions: formDimensions,
-      weight: formWeight,
-      minQuantity: Number(formMinQty) || 1,
-      stockStatus: formStockStatus,
-      isFeatured: formIsFeatured,
-      wholesaleTiers: formWholesaleTiers
-    };
+    setIsSavingProduct(true);
+    setProductSaveError(null);
 
-    if (editingProduct) {
-      await onUpdateProduct({ ...editingProduct, ...payload });
-    } else {
-      await onAddProduct(payload);
+    try {
+      const payload = {
+        name: formName.trim(),
+        nameEn: formNameEn.trim(),
+        itemCode: formCode.trim() || `EGY-${Math.floor(100 + Math.random() * 900)}`,
+        category: formCategory,
+        price: Number(formPrice) || 1,
+        originalPrice: formOriginalPrice ? Number(formOriginalPrice) : undefined,
+        shortDesc: formShortDesc,
+        description: formDesc,
+        images: [formImageUrl || 'https://images.unsplash.com/photo-1599732448498-34863c8096b8?auto=format&fit=crop&w=800&q=80'],
+        material: formMaterial,
+        dimensions: formDimensions,
+        weight: formWeight,
+        minQuantity: Number(formMinQty) || 1,
+        stockStatus: formStockStatus,
+        isFeatured: formIsFeatured,
+        wholesaleTiers: formWholesaleTiers
+      };
+
+      if (editingProduct) {
+        await onUpdateProduct({ ...editingProduct, ...payload });
+      } else {
+        await onAddProduct(payload);
+      }
+
+      setIsProductModalOpen(false);
+    } catch (err: any) {
+      console.error('Failed to save product:', err);
+      setProductSaveError(err.message || 'حدث خطأ أثناء حفظ المنتج على السيرفر');
+    } finally {
+      setIsSavingProduct(false);
     }
-
-    setIsProductModalOpen(false);
   };
 
   // Save Settings
@@ -797,6 +811,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
             <form onSubmit={handleSaveProduct} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto text-xs">
               
+              {productSaveError && (
+                <div className="p-3 bg-red-900/30 border border-red-500/50 rounded-xl text-red-300 text-xs flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
+                  <span>{productSaveError}</span>
+                </div>
+              )}
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-[#8e8574] font-bold block mb-1">اسم المنتج باللغة العربية *</label>
@@ -1003,16 +1024,19 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <div className="pt-4 border-t border-[#d4af37]/25 flex items-center justify-end gap-2">
                 <button
                   type="button"
+                  disabled={isSavingProduct}
                   onClick={() => setIsProductModalOpen(false)}
-                  className="px-4 py-2.5 rounded-xl bg-[#202336] text-[#d6cbbb] hover:text-white"
+                  className="px-4 py-2.5 rounded-xl bg-[#202336] text-[#d6cbbb] hover:text-white disabled:opacity-50"
                 >
                   إلغاء
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#d4af37] via-[#e5c158] to-[#b38f29] text-black font-extrabold shadow-lg"
+                  disabled={isSavingProduct}
+                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#d4af37] via-[#e5c158] to-[#b38f29] text-black font-extrabold shadow-lg disabled:opacity-50 flex items-center gap-2"
                 >
-                  {editingProduct ? 'حفظ التعديلات' : 'إضافة المنتج فوراً'}
+                  {isSavingProduct && <RefreshCw className="w-4 h-4 animate-spin" />}
+                  <span>{isSavingProduct ? 'جاري الحفظ على السيرفر...' : (editingProduct ? 'حفظ التعديلات' : 'إضافة المنتج فوراً')}</span>
                 </button>
               </div>
 
