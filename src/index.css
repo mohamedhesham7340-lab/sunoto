@@ -1,0 +1,123 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    font-family: 'Cairo', 'Cinzel', serif, system-ui, -apple-system, sans-serif;
+    background-color: #FDFBF7;
+    color: #2D241E;
+  }
+}
+
+.font-pharaoh {
+  font-family: 'El Messiri', 'Cinzel', serif;
+}
+
+.font-cinzel {
+  font-family: 'Cinzel', serif;
+}
+
+.font-serif-artistic {
+  font-family: 'El Messiri', 'Cinzel', 'Times New Roman', serif;
+}
+
+/* Artistic Flair Gold Gradients & Foil Accents */
+.gold-gradient-text {
+  background: linear-gradient(135deg, #D4AF37 0%, #F3E0A2 50%, #AA771C 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.gold-gradient-bg {
+  background: linear-gradient(135deg, #D4AF37 0%, #F3E0A2 50%, #AA771C 100%);
+}
+
+.gold-border-glow {
+  box-shadow: 0 0 15px rgba(212, 175, 55, 0.2), inset 0 0 10px rgba(212, 175, 55, 0.08);
+}
+
+.parchment-pattern {
+  background-color: #FDFBF7;
+  background-image: radial-gradient(#d4af37 0.6px, transparent 0.6px), radial-gradient(#d4af37 0.6px, #FDFBF7 0.6px);
+  background-size: 24px 24px;
+  background-position: 0 0, 12px 12px;
+}
+
+.obsidian-pattern {
+  background-color: #1A1A1A;
+  background-image: radial-gradient(#d4af37 0.5px, transparent 0.5px), radial-gradient(#d4af37 0.5px, #1A1A1A 0.5px);
+  background-size: 24px 24px;
+  background-position: 0 0, 12px 12px;
+}
+
+/* Custom Artistic Gold Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #2D241E;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #D4AF37;
+  border-radius: 2px;
+  border: 1px solid #1A1A1A;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #E5C158;
+}
+
+/* Print Styles for Flawless Arabic PDF Quotation Export */
+@media print {
+  body {
+    background: #ffffff !important;
+    color: #111111 !important;
+    font-size: 12pt;
+  }
+  
+  .no-print, nav, header, footer, .sidebar, button, input, .dialog-backdrop {
+    display: none !important;
+  }
+  
+  .print-only {
+    display: block !important;
+  }
+  
+  .quotation-paper {
+    border: 3px solid #D4AF37 !important;
+    padding: 24px !important;
+    box-shadow: none !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    width: 100% !important;
+    margin: 0 !important;
+  }
+
+  .gold-gradient-text {
+    background: none !important;
+    -webkit-text-fill-color: #8b6508 !important;
+    color: #8b6508 !important;
+  }
+  
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+  }
+  
+  th {
+    background-color: #f7f3e8 !important;
+    color: #2b1f07 !important;
+    border: 1px solid #D4AF37 !important;
+  }
+  
+  td {
+    border: 1px solid #e0d0b0 !important;
+  }
+  
+  @page {
+    size: A4 portrait;
+    margin: 1.2cm;
+  }
+}

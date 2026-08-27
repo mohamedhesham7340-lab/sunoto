@@ -1,0 +1,6 @@
+{
+  "name": "الفرعون الذهبي - متجر وعروض أسعار المنتجات",
+  "description": "منصة وكتالوج عروض أسعار إلكتروني بالستايل الفرعوني الملكي مع لوحة تحكم كاملة، تحويل الطلبات إلى واتساب، تصدير عروض الأسعار PDF، وتكامل لقاعدة بيانات Neon على Vercel.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
