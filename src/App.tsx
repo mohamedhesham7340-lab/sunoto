@@ -38,58 +38,78 @@ export default function App() {
   const [isCartOpen, setIsCartOpen] = useState(false);
 
   // Cart / Quotation Builder
-  const [cart, setCart] = useState<CartItem[]>(() => {
-    try {
-      const saved = localStorage.getItem('pharaoh_cart_v1');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
+  const [cart, setCart] = useState<CartItem[]>([]);
 
-  // Save cart changes to localStorage
-  useEffect(() => {
+  // Function to sync all data directly from server
+  const syncServerData = async (showLoading = false) => {
+    if (showLoading) setIsLoading(true);
     try {
-      localStorage.setItem('pharaoh_cart_v1', JSON.stringify(cart));
+      const [fetchedProducts, fetchedSettings, fetchedQuotes, fetchedDb] = await Promise.all([
+        api.getProducts(),
+        api.getSettings(),
+        api.getQuotes(),
+        api.getDbStatus()
+      ]);
+      setProducts(fetchedProducts);
+      setSettings(fetchedSettings);
+      setQuotes(fetchedQuotes);
+      setDbStatus(fetchedDb);
+
+      // Keep detail modal in sync if a product is currently viewed
+      setSelectedDetailProduct(prev => {
+        if (!prev) return null;
+        return fetchedProducts.find(p => p.id === prev.id) || null;
+      });
+
+      // Keep cart prices in sync with latest product prices
+      setCart(prevCart => {
+        return prevCart.map(item => {
+          const freshProd = fetchedProducts.find(p => p.id === item.productId);
+          return freshProd ? { ...item, product: freshProd } : item;
+        });
+      });
+
+      return { fetchedProducts, fetchedSettings, fetchedQuotes, fetchedDb };
     } catch (err) {
-      console.warn('Failed to save cart:', err);
+      console.error('Error syncing server data:', err);
+      return null;
+    } finally {
+      if (showLoading) setIsLoading(false);
     }
-  }, [cart]);
+  };
 
-  // Initial Data Fetch
+  // Initial Data Fetch & Periodic Live Sync
   useEffect(() => {
-    async function loadData() {
-      setIsLoading(true);
-      try {
-        const [fetchedProducts, fetchedSettings, fetchedQuotes, fetchedDb] = await Promise.all([
-          api.getProducts(),
-          api.getSettings(),
-          api.getQuotes(),
-          api.getDbStatus()
-        ]);
-        setProducts(fetchedProducts);
-        setSettings(fetchedSettings);
-        setQuotes(fetchedQuotes);
-        setDbStatus(fetchedDb);
-
-        // Check if a specific product is requested via URL query params
-        if (typeof window !== 'undefined') {
-          const urlParams = new URLSearchParams(window.location.search);
-          const productId = urlParams.get('product');
-          if (productId) {
-            const foundProduct = fetchedProducts.find(p => p.id === productId || p.itemCode === productId);
-            if (foundProduct) {
-              setSelectedDetailProduct(foundProduct);
-            }
+    syncServerData(true).then(res => {
+      if (res && typeof window !== 'undefined') {
+        const urlParams = new URLSearchParams(window.location.search);
+        const productId = urlParams.get('product');
+        if (productId) {
+          const foundProduct = res.fetchedProducts.find(p => p.id === productId || p.itemCode === productId);
+          if (foundProduct) {
+            setSelectedDetailProduct(foundProduct);
           }
         }
-      } catch (err) {
-        console.error('Error initializing application data:', err);
-      } finally {
-        setIsLoading(false);
       }
-    }
-    loadData();
+    });
+
+    // Sync on tab focus or visibility change
+    const onFocus = () => {
+      syncServerData(false);
+    };
+    window.addEventListener('focus', onFocus);
+    window.addEventListener('visibilitychange', onFocus);
+
+    // Live background polling every 4 seconds to sync across multiple tabs/devices
+    const timer = setInterval(() => {
+      syncServerData(false);
+    }, 4000);
+
+    return () => {
+      window.removeEventListener('focus', onFocus);
+      window.removeEventListener('visibilitychange', onFocus);
+      clearInterval(timer);
+    };
   }, []);
 
   // Cart Handlers
@@ -125,53 +145,43 @@ export default function App() {
     setCart([]);
   };
 
-  // Product Admin Operations (Instant Live Sync)
+  // Product Admin Operations (100% Server Driven)
   const handleAddProduct = async (productData: Omit<Product, 'id' | 'createdAt'>): Promise<Product> => {
     const created = await api.createProduct(productData);
-    setProducts(prev => [created, ...prev]);
+    await syncServerData(false);
     return created;
   };
 
   const handleUpdateProduct = async (updatedProduct: Product): Promise<Product> => {
     const saved = await api.updateProduct(updatedProduct);
-    setProducts(prev => prev.map(p => p.id === saved.id ? saved : p));
-    // Also update cart item if present
-    setCart(prev => prev.map(item => item.productId === saved.id ? { ...item, product: saved } : item));
+    await syncServerData(false);
     return saved;
   };
 
   const handleDeleteProduct = async (id: string): Promise<boolean> => {
     const success = await api.deleteProduct(id);
-    if (success) {
-      setProducts(prev => prev.filter(p => p.id !== id));
-      setCart(prev => prev.filter(item => item.productId !== id));
-    }
+    await syncServerData(false);
     return success;
   };
 
   // Settings Admin Operations
   const handleUpdateSettings = async (newSettings: SiteSettings): Promise<SiteSettings> => {
     const saved = await api.updateSettings(newSettings);
-    setSettings(saved);
+    await syncServerData(false);
     return saved;
   };
 
   // Quote Save Handler
   const handleSaveQuote = async (quoteData: Omit<QuoteRequest, 'id' | 'quoteNumber' | 'createdAt'>): Promise<QuoteRequest> => {
     const saved = await api.saveQuote(quoteData);
-    setQuotes(prev => [saved, ...prev]);
+    await syncServerData(false);
     return saved;
   };
 
   // Reset to sample defaults
   const handleResetDefaults = async () => {
     await api.resetToDefaults();
-    const [fetchedProducts, fetchedSettings] = await Promise.all([
-      api.getProducts(),
-      api.getSettings()
-    ]);
-    setProducts(fetchedProducts);
-    setSettings(fetchedSettings);
+    await syncServerData(true);
   };
 
   // Filtered Products for Catalog
